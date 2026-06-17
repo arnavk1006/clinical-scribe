@@ -2,11 +2,40 @@
 
 ## Overview
 
-Clinical Scribe is an ambient audio assistant for in-person (and over-video) doctor-patient consultations. It listens to a visit, transcribes it locally, and uses an LLM to generate a structured SOAP note and a draft prescription. The doctor reviews and edits this output after the session in a secure "Inbox," alongside the patient's profile and history, before it's copied into the hospital's EHR system and the prescription is routed to the pharmacy for delivery or pickup.
+Clinical Scribe is an ambient audio assistant for in-person (and over-video) doctor-patient consultations. It listens to a visit, transcribes it privately on a self-hosted backend, and uses an LLM to generate a structured SOAP note and a draft prescription. The doctor reviews and edits this output after the session in a secure "Inbox," alongside the patient's profile and history, before it's copied into the hospital's EHR system and the prescription is routed to the pharmacy for delivery or pickup.
 
-All audio processing happens on-device using WebAssembly and local LLMs — no audio leaves the machine, and no cloud transcription API is used. This is a deliberate architectural choice for privacy and cost, and it's designed with HIPAA-aligned technical safeguards in mind (data minimization, no third-party audio transmission, local-only storage).
+All transcription and LLM inference is processed locally and privately on a self-hosted backend. No audio or text data leaves the self-hosted infrastructure, and no third-party cloud APIs (such as OpenAI or Google Cloud Speech-to-Text) are used. The frontend records audio chunks and streams them directly to your own self-hosted server process via secure HTTP. This deliberate design preserves a strong privacy and compliance story, suitable for secure LAN/VPC deployment, while allowing the backend to handle resource-intensive native whisper.cpp transcription (enabling GPU acceleration and high performance) without blocking or slowing down the client browser.
 
 Next Phase: video calling and remote scheduling of X-rays/MRIs/diagnostics, agentic suggestions to doctor regarding session flow and prescription.
+
+
+## Architectural Vision: Pluggable Processing Engines
+
+To accommodate different deployment scales, compliance requirements, and client-side hardware constraints, Clinical Scribe is designed with a **pluggable processing architecture** in mind. The system will support three processing modes:
+
+```mermaid
+graph TD
+    Client[Doctor's Browser / Client] -->|Mode 1: Self-Hosted| Backend[Private Backend Server]
+    Backend -->|Native STT| NativeWhisper[Native whisper.cpp + Local LLM]
+    
+    Client -->|Mode 2: Cloud Hybrid| CloudBackend[Secure API Proxy]
+    CloudBackend -->|Cloud APIs| CloudSTT[OpenAI/Deepgram/Gemini APIs]
+    
+    Client -->|Mode 3: Fully On-Device| WASM[Browser WASM Sandbox]
+    WASM -->|WASM STT| WASMWhisper[ffmpeg.wasm + whisper.wasm + Web Workers]
+```
+
+1. **Self-Hosted Private Backend (Default / Current Focus)**
+   * **How it works:** Audio is captured by the client and streamed in chunks to a private server (e.g., in a hospital LAN or secure VPC). The backend processes audio using native `ffmpeg` and `whisper.cpp` (allowing GPU acceleration) and queries local LLM endpoints.
+   * **Best for:** Medium-to-large healthcare organizations requiring total data ownership without high client-side CPU/memory overhead.
+
+2. **Cloud Hybrid (Optional Adapter)**
+   * **How it works:** Audio is sent to the backend, which proxies transcription and inference to commercial HIPAA-compliant cloud services (e.g., OpenAI, Deepgram, Azure, Gemini API) under Business Associate Agreements (BAAs).
+   * **Best for:** Independent practitioners or small clinics looking for high-accuracy native transcription with minimal self-hosting infrastructure overhead.
+
+3. **Fully On-Device (Stretch WASM Goal)**
+   * **How it works:** Audio recording, resampling (`ffmpeg.wasm`), speech-to-text (`whisper.cpp` via WASM), and LLM generation (using client-side models) occur entirely inside the browser sandboxed environment. No raw audio ever leaves the physical client machine.
+   * **Best for:** Individual doctors seeking ultimate zero-trust privacy with zero local server infrastructure dependencies.
 
 
 ## System Prerequisites
@@ -109,7 +138,7 @@ The container automatically installs `ffmpeg` and starts the Hono backend server
 1. **Reliable local transcription.** Get whisper.cpp producing accurate, medically-literate transcripts from saved audio, one session at a time, without relying on any external API.
 2. **Useful structured output.** Turn a raw transcript into a SOAP note and draft prescription that a doctor would actually trust enough to lightly edit rather than rewrite from scratch.
 3. **A review workflow that fits how doctors actually work.** The Inbox should make it fast to confirm, edit, and push notes to the EHR and pharmacy — not add a new chore on top of the visit.
-4. **Defensible privacy and compliance posture.** On-device processing is the foundation, but the surrounding system (access control, audit trail, retention policy) needs to actually hold up if this were ever used with real patients.
+4. **Defensible privacy and compliance posture.** A self-hosted, private backend architecture is the foundation (ensuring no data is ever transmitted to third-party cloud APIs), but the surrounding system (access control, audit trail, retention policy) needs to actually hold up if this were ever used with real patients.
 5. **(Stretch) Pattern-aware suggestions.** Surface relevant context from a doctor's own past diagnoses/notes when it's genuinely useful — not a vague "AI finds patterns" promise, but a scoped, specific feature (see below).
 
 ---
@@ -201,4 +230,10 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 - [ ] Add authentication and role-based access control (a doctor should only see their own patients' sessions, at minimum).
 - [ ] Add audit logging for note edits and prescription changes — who changed what, when (this is also necessary to make `doctorEdited` actually meaningful for hospital recordkeeping).
 - [ ] Encrypt data at rest (patient PII, transcripts, notes) and define an explicit retention policy rather than indefinite-by-default storage — most jurisdictions set retention minimums and rules, not an "indefinite" default.
-- [ ] Write up an honest compliance posture doc: what's actually covered (on-device processing, no third-party audio transmission) vs. what would still be required for real HIPAA compliance in production (BAAs, formal risk assessment, breach notification process).
+- [ ] Write up an honest compliance posture doc: what's actually covered (self-hosted private infrastructure, no third-party audio/data transmission) vs. what would still be required for real HIPAA compliance in production (BAAs, formal risk assessment, breach notification process).
+
+### Phase 4: Pluggable Engines & Client-Side WASM (Stretch Goals)
+- [ ] Refactor the backend/frontend boundaries to support pluggable transcription and LLM engines (Self-Hosted, Cloud, and Client-Side WASM).
+- [ ] Prototype `whisper.wasm` integration in the frontend using Web Workers to perform transcription entirely on-device.
+- [ ] Experiment with `ffmpeg.wasm` for frontend-side audio resampling to feed directly into the browser-based speech-to-text engine.
+- [ ] Implement client-side LLM inference using Web-LLM or `transformers.js` for completely local SOAP note generation.
