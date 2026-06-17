@@ -128,11 +128,11 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/Wor
 
 ### Phase 1: Core transcription pipeline (in progress)
 - [ ] Wire up a minimal front-end to the existing back-end:
-  - Create new session
-  - Start a new transcript recording
-  - Save audio chunk to disk locally
-  - On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
-  - Trigger note creation, which kicks off whisper.cpp on the saved chunks and produces a notes file
+  - [x] Start a new transcript recording
+  - [x] Save audio chunk to disk locally
+  - [ ] Create new session
+  - [ ] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
+  - [ ] Trigger note creation, which kicks off whisper.cpp on the saved chunks and produces a notes file
 - [ ] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 

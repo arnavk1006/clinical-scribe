@@ -218,7 +218,7 @@ describe("Clinical Scribe Backend API", () => {
   describe("Upload Router", () => {
     it("should upload a file and save it to tmp", async () => {
       const formData = new FormData();
-      const file = new File(["test audio data content"], "test-audio.wav", { type: "audio/wav" });
+      const file = new File(["test audio data content"], "test-audio.webm", { type: "audio/wav" });
       formData.append("file", file);
 
       const res = await app.request("/api/upload", {
