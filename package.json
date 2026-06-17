@@ -10,6 +10,10 @@
     "test:backend": "bun --filter clinical-scribe-backend test",
     "db:generate": "bun --filter clinical-scribe-backend db:generate",
     "db:migrate": "bun --filter clinical-scribe-backend db:migrate",
-    "db:seed": "bun --filter clinical-scribe-backend db:seed"
+    "db:seed": "bun --filter clinical-scribe-backend db:seed",
+    "typecheck": "bun x tsc -p apps/backend/tsconfig.json && bun x tsc -p apps/frontend/tsconfig.app.json --noEmit",
+    "lint": "bun --filter clinical-scribe-frontend lint",
+    "build": "bun --filter clinical-scribe-frontend build",
+    "test": "bun --filter clinical-scribe-backend test"
   }
 }

@@ -15,6 +15,9 @@ This project is organized as a monorepo utilizing **Bun Workspaces**:
 
 ```text
 clinical-scribe/
+├── .github/
+│   └── workflows/
+│       └── typescript.yml # CI workflow for linting, typechecking, and testing
 ├── package.json          # Root package.json defining workspaces
 ├── bun.lock              # Single, unified lockfile for the whole project
 ├── apps/
@@ -44,9 +47,17 @@ All developer commands can be run directly from the root of the project using Bu
   ```bash
   bun run dev:frontend
   ```
+* **Run Monorepo Typechecking:**
+  ```bash
+  bun run typecheck
+  ```
+* **Run Frontend Linter:**
+  ```bash
+  bun run lint
+  ```
 * **Run Backend Test Suite:**
   ```bash
-  bun run test:backend
+  bun run test
   ```
 * **Database migrations & seeding (Drizzle Kit):**
   ```bash
@@ -54,6 +65,16 @@ All developer commands can be run directly from the root of the project using Bu
   bun run db:migrate     # Applies migrations to the local SQLite database
   bun run db:seed        # Seeds the database with sample data
   ```
+
+### Environment Variables
+
+The backend can be configured using a `.env` file inside `apps/backend/`. A template is provided in `apps/backend/.env.example`.
+
+* **`PORT`** (Default: `3000`): The port the Hono backend server listens on.
+* **`DATABASE_PATH`** (Default: `./data/clinical-scribe.sqlite`): File path to the SQLite database.
+* **`UPLOAD_DIR`** (Default: `/tmp`): The folder where uploaded audio files are saved (pruned every 3 days by macOS if left to default).
+
+---
 
 ## Project Goals
 
@@ -63,12 +84,14 @@ All developer commands can be run directly from the root of the project using Bu
 4. **Defensible privacy and compliance posture.** On-device processing is the foundation, but the surrounding system (access control, audit trail, retention policy) needs to actually hold up if this were ever used with real patients.
 5. **(Stretch) Pattern-aware suggestions.** Surface relevant context from a doctor's own past diagnoses/notes when it's genuinely useful — not a vague "AI finds patterns" promise, but a scoped, specific feature (see below).
 
+---
+
 ## Current State
 
-The backend API is built using [Hono](https://hono.dev/) and is organized into five routers: Patients, Doctors, Sessions, SOAP Notes, and Transcripts. Routes, schema, and tests for all five are done.
+The backend API is built using [Hono](https://hono.dev/) and is organized into six routers: Patients, Doctors, Sessions, SOAP Notes, Transcripts, and Uploads. Routes, schema, and tests for all six are done.
 
 ### Patients (`/api/patients`)
-Defined in [apps/backend/src/routes/patients.ts](file:///Users/arnavkohli/Work/personal-projects/clinical-scribe-backend/apps/backend/src/routes/patients.ts).
+Defined in [apps/backend/src/routes/patients.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/patients.ts).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -79,7 +102,7 @@ Defined in [apps/backend/src/routes/patients.ts](file:///Users/arnavkohli/Work/p
 | **DELETE** | `/:id` | Deletes a patient by their ID. |
 
 ### Doctors (`/api/doctors`)
-Defined in [apps/backend/src/routes/doctors.ts](file:///Users/arnavkohli/Work/personal-projects/clinical-scribe-backend/apps/backend/src/routes/doctors.ts).
+Defined in [apps/backend/src/routes/doctors.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/doctors.ts).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -90,7 +113,7 @@ Defined in [apps/backend/src/routes/doctors.ts](file:///Users/arnavkohli/Work/pe
 | **DELETE** | `/:id` | Deletes a doctor by their ID. |
 
 ### Sessions (`/api/sessions`)
-Defined in [apps/backend/src/routes/sessions.ts](file:///Users/arnavkohli/Work/personal-projects/clinical-scribe-backend/apps/backend/src/routes/sessions.ts).
+Defined in [apps/backend/src/routes/sessions.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/sessions.ts).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -101,7 +124,7 @@ Defined in [apps/backend/src/routes/sessions.ts](file:///Users/arnavkohli/Work/p
 | **DELETE** | `/:id` | Deletes a session by its ID. |
 
 ### SOAP Notes (`/api/notes`)
-Defined in [apps/backend/src/routes/notes.ts](file:///Users/arnavkohli/Work/personal-projects/clinical-scribe-backend/apps/backend/src/routes/notes.ts).
+Defined in [apps/backend/src/routes/notes.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/notes.ts).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -113,7 +136,7 @@ Defined in [apps/backend/src/routes/notes.ts](file:///Users/arnavkohli/Work/pers
 | **DELETE** | `/:id` | Deletes a SOAP note by its ID. |
 
 ### Transcripts (`/api/transcripts`)
-Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/Work/personal-projects/clinical-scribe-backend/apps/backend/src/routes/transcripts.ts).
+Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/transcripts.ts).
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -124,12 +147,22 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/Wor
 | **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `{ id?: string, sequenceNumber: number, location: string }` (sequenceNumber and location are required). |
 | **DELETE** | `/:id` | Deletes a transcript by its ID (this cascades to its chunks in the database). |
 
+### Uploads (`/api/upload`)
+Defined in [apps/backend/src/routes/upload.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/upload.ts).
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| **POST** | `/` | Uploads an audio recording file. <br> **Request Body**: `multipart/form-data` containing a `file` field. |
+
+---
+
 ## Roadmap — What Needs to Happen to Get There
 
 ### Phase 1: Core transcription pipeline (in progress)
-- [ ] Wire up a minimal front-end to the existing back-end:
-  - [x] Start a new transcript recording
-  - [x] Save audio chunk to disk locally
+- [x] Wire up a minimal front-end to the existing back-end:
+  - [x] Start/stop audio recording on the frontend using MediaRecorder
+  - [x] Upload audio recordings directly to the backend
+  - [x] Save audio files locally on the backend
   - [ ] Create new session
   - [ ] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
   - [ ] Trigger note creation, which kicks off whisper.cpp on the saved chunks and produces a notes file
