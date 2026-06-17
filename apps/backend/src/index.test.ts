@@ -227,5 +227,114 @@ describe("Clinical Scribe Backend API", () => {
       const chunksAfter = await db.select().from(transcriptChunks).where(eq(transcriptChunks.transcriptId, transcriptId));
       expect(chunksAfter.length).toBe(0);
     });
+
+    describe("Process Transcript Chunk", () => {
+      let processSessionId: string;
+      let processTranscriptId: string;
+      let processChunkId: string;
+      let correctFilePath: string;
+
+      beforeAll(async () => {
+        // Seed an isolated session to prevent side effects in other tests
+        processSessionId = `session-process-${crypto.randomUUID()}`;
+        await db.insert(sessions).values({
+          id: processSessionId,
+          patientId: "pat-test",
+          doctorId: "doc-test",
+          status: "recording",
+          createdAt: new Date(),
+        });
+
+        const res = await app.request("/api/transcripts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: processSessionId }),
+        });
+        const data = (await res.json()) as any;
+        processTranscriptId = data.id;
+
+        processChunkId = crypto.randomUUID();
+        correctFilePath = `/tmp/${crypto.randomUUID()}.wav`;
+
+        await db.insert(transcriptChunks).values({
+          id: processChunkId,
+          transcriptId: processTranscriptId,
+          sequenceNumber: 0,
+          location: correctFilePath,
+          createdAt: new Date(),
+        });
+      });
+
+      it("should return 404 if the transcript does not exist", async () => {
+        const res = await app.request(`/api/transcripts/process/non-existent-transcript/chunk/${processChunkId}`);
+        expect(res.status).toBe(404);
+        const data = await res.json() as any;
+        expect(data.error).toContain("Transcript not found");
+      });
+
+      it("should return 404 if the chunk does not exist", async () => {
+        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/non-existent-chunk`);
+        expect(res.status).toBe(404);
+        const data = await res.json() as any;
+        expect(data.error).toContain("Chunk not found");
+      });
+
+      it("should return 400 if the chunk belongs to a different transcript", async () => {
+        const otherRes = await app.request("/api/transcripts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: processSessionId }),
+        });
+        const otherData = (await otherRes.json()) as any;
+        const otherTranscriptId = otherData.id;
+
+        const res = await app.request(`/api/transcripts/process/${otherTranscriptId}/chunk/${processChunkId}`);
+        expect(res.status).toBe(400);
+        const data = await res.json() as any;
+        expect(data.error).toContain("Chunk does not belong to the given transcript");
+      });
+
+      it("should return 404 if the physical chunk file is missing on disk", async () => {
+        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/${processChunkId}`);
+        expect(res.status).toBe(404);
+        const data = await res.json() as any;
+        expect(data.error).toContain("Chunk file not found on disk");
+      });
+
+      it("should process the chunk using ffmpeg successfully and return 200", async () => {
+        const { promises: fs } = await import("fs");
+        
+        // Use Bun.spawn to safely generate the silent audio file
+        const proc = Bun.spawn([
+          "ffmpeg",
+          "-y",
+          "-nostdin",
+          "-f",
+          "lavfi",
+          "-i",
+          "anullsrc=r=44100:cl=mono",
+          "-t",
+          "1",
+          correctFilePath,
+        ]);
+        const exitCode = await proc.exited;
+        expect(exitCode).toBe(0);
+
+        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/${processChunkId}`);
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.message).toBe("Processed successfully");
+        expect(data.outputPath).toContain("_16k.wav");
+
+        await fs.access(data.outputPath);
+
+        try {
+          await fs.unlink(correctFilePath);
+          await fs.unlink(data.outputPath);
+        } catch (err) {
+          // Ignore errors
+        }
+      });
+    });
   });
 });

@@ -9,6 +9,17 @@ All audio processing happens on-device using WebAssembly and local LLMs — no a
 Next Phase: video calling and remote scheduling of X-rays/MRIs/diagnostics, agentic suggestions to doctor regarding session flow and prescription.
 
 
+## System Prerequisites
+
+To run the backend application, you must have **ffmpeg** installed on your system. It is used to resample recorded audio chunks to 16kHz mono WAV format suitable for speech-to-text models:
+
+* **macOS:** `brew install ffmpeg`
+* **Ubuntu/Debian:** `sudo apt update && sudo apt install -y ffmpeg`
+* **Docker:** Ensure `ffmpeg` is installed in your Docker container (e.g., `apk add ffmpeg` or `apt-get install -y ffmpeg`).
+
+A validation check runs at backend server startup and will warn you if `ffmpeg` is missing from your system `PATH`.
+
+
 ## Repository Structure & Workspaces
 
 This project is organized as a monorepo utilizing **Bun Workspaces**:
@@ -73,6 +84,23 @@ The backend can be configured using a `.env` file inside `apps/backend/`. A temp
 * **`PORT`** (Default: `3000`): The port the Hono backend server listens on.
 * **`DATABASE_PATH`** (Default: `./data/clinical-scribe.sqlite`): File path to the SQLite database.
 * **`UPLOAD_DIR`** (Default: `/tmp`): The folder where uploaded audio files are saved (pruned every 3 days by macOS if left to default).
+
+### Docker Deployment
+
+A `Dockerfile` is provided at the root of the project to package the application with all necessary system dependencies pre-configured.
+
+1. **Build the image:**
+   ```bash
+   docker build -t clinical-scribe .
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run -p 3000:3000 clinical-scribe
+   ```
+
+The container automatically installs `ffmpeg` and starts the Hono backend server.
+
 
 ---
 
@@ -145,6 +173,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 | **GET** | `/session/:sessionId` | Retrieves transcripts associated with a specific session ID, with their chunks. |
 | **POST** | `/` | Creates a new transcript. <br> **Request Body**: `{ sessionId: string }` (sessionId is required). |
 | **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `multipart/form-data` containing `sequenceNumber` and `file` fields (both are required). |
+| **GET** | `/process/:transcriptId/chunk/:chunkId` | Triggers ffmpeg resampling of the chunk file to 16kHz mono WAV format. |
 | **DELETE** | `/:id` | Deletes a transcript by its ID (this cascades to its chunks in the database). |
 
 ---
@@ -157,7 +186,8 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
   - [x] Upload audio recordings directly to the backend
   - [x] Save audio files locally on the backend
   - [ ] Create new session
-  - [ ] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
+  - [x] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
+  - [x] Resample audio chunks to 16kHz mono WAV format using ffmpeg (`GET /process/:transcriptId/chunk/:chunkId`)
   - [ ] Trigger note creation, which kicks off whisper.cpp on the saved chunks and produces a notes file
 - [ ] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.

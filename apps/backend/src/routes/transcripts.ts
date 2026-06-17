@@ -92,6 +92,68 @@ app.get("/session/:sessionId", async (c) => {
   }
 });
 
+app.get("/process/:transcriptId/chunk/:chunkId", async (c) => {
+  const transcriptId = c.req.param("transcriptId");
+  const chunkId = c.req.param("chunkId");
+  try {
+    const transcriptExists = await db.query.transcripts.findFirst({
+      where: (transcripts, { eq }) => eq(transcripts.id, transcriptId),
+    });
+    if (!transcriptExists) {
+      return c.json({ error: "Transcript not found" }, 404);
+    }
+
+    const chunk = await db.query.transcriptChunks.findFirst({
+      where: (chunks, { eq }) => eq(chunks.id, chunkId),
+    });
+    if (!chunk) {
+      return c.json({ error: "Chunk not found" }, 404);
+    }
+
+    if (chunk.transcriptId !== transcriptId) {
+      return c.json({ error: "Chunk does not belong to the given transcript" }, 400);
+    }
+
+    const inputPath = chunk.location;
+
+    try {
+      await fs.access(inputPath);
+    } catch {
+      return c.json({ error: "Chunk file not found on disk" }, 404);
+    }
+
+    const inputFileName = inputPath.split(/[\\/]/).pop() || "";
+    const fileNameWithoutExt = inputFileName.substring(0, inputFileName.lastIndexOf(".")) || inputFileName;
+    const outputPath = join(UPLOAD_DIR, `${fileNameWithoutExt}_16k.wav`);
+
+    const proc = Bun.spawn([
+      "ffmpeg",
+      "-y",
+      "-nostdin",
+      "-i",
+      inputPath,
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-c:a",
+      "pcm_s16le",
+      outputPath,
+    ]);
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) {
+      throw new Error(`ffmpeg exited with code ${exitCode}`);
+    }
+
+    return c.json({
+      message: "Processed successfully",
+      outputPath,
+    }, 200);
+  } catch (error: any) { 
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 app.post("/", async (c) => {
   try {
     const body = await c.req.json();

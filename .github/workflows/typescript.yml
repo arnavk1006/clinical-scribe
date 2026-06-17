@@ -29,6 +29,11 @@ jobs:
       - name: Run Typechecking
         run: bun run typecheck
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Run Database Migrations
         run: bun run db:migrate
 
