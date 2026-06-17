@@ -37,6 +37,16 @@ async function main() {
   };
   await db.insert(patients).values(newPatient);
 
+  console.log("Creating default session...");
+  const newSession = {
+    id: "session-12345678",
+    patientId: newPatient.id,
+    doctorId: newDoctor.id,
+    status: "recording" as const,
+    createdAt: new Date(),
+  };
+  await db.insert(sessions).values(newSession);
+
   console.log("Database seeded successfully!");
   console.log(`Created Doctor: ${newDoctor.email} (Password: ${defaultPassword})`);
   console.log(`Created Patient: ${newPatient.email} (Password: ${defaultPassword})`);

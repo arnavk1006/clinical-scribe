@@ -163,26 +163,35 @@ describe("Clinical Scribe Backend API", () => {
     });
 
     it("should add a chunk to an existing transcript", async () => {
+      const formData = new FormData();
+      formData.append("sequenceNumber", "2");
+      const file = new File(["test chunk audio data"], "chunk2.webm", { type: "audio/webm" });
+      formData.append("file", file);
+
       const res = await app.request(`/api/transcripts/${transcriptId}/chunks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sequenceNumber: 2,
-          location: "https://scribe-storage.hospital.org/chunks/chunk2.json",
-        }),
+        body: formData,
       });
 
       expect(res.status).toBe(201);
       const data = (await res.json()) as any;
       expect(data.transcriptId).toBe(transcriptId);
       expect(data.sequenceNumber).toBe(2);
-      expect(data.location).toBe("https://scribe-storage.hospital.org/chunks/chunk2.json");
+      expect(data.location).toContain(".webm");
 
       // Verify it was added
       const getRes = await app.request(`/api/transcripts/${transcriptId}`);
       const getData = (await getRes.json()) as any;
       expect(getData.chunks.length).toBe(3);
       expect(getData.chunks[2].sequenceNumber).toBe(2);
+
+      // Clean up the created file on disk
+      const { promises: fs } = await import("fs");
+      try {
+        await fs.unlink(data.location);
+      } catch (err) {
+        // Ignore if file doesn't exist
+      }
     });
 
     it("should get transcripts by session ID", async () => {
@@ -212,49 +221,6 @@ describe("Clinical Scribe Backend API", () => {
       // Verify chunks are cascadingly deleted
       const chunksAfter = await db.select().from(transcriptChunks).where(eq(transcriptChunks.transcriptId, transcriptId));
       expect(chunksAfter.length).toBe(0);
-    });
-  });
-
-  describe("Upload Router", () => {
-    it("should upload a file and save it to tmp", async () => {
-      const formData = new FormData();
-      const file = new File(["test audio data content"], "test-audio.webm", { type: "audio/wav" });
-      formData.append("file", file);
-
-      const res = await app.request("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      expect(res.status).toBe(201);
-      const data = (await res.json()) as any;
-      expect(data).toHaveProperty("location");
-
-      // Verify file exists on disk
-      const { join, resolve } = await import("path");
-      const { promises: fs } = await import("fs");
-
-      let uploadDir: string;
-      if (process.env.UPLOAD_DIR) {
-        uploadDir = resolve(process.cwd(), process.env.UPLOAD_DIR);
-      } else {
-        uploadDir = "/tmp";
-      }
-
-      const fileName = data.location.split("/").pop() || "";
-      const fullPath = join(uploadDir, fileName);
-      const fileContent = await fs.readFile(fullPath, "utf-8");
-      expect(fileContent).toBe("test audio data content");
-
-      await fs.unlink(fullPath);
-    });
-
-    it("should return 400 if no file is provided", async () => {
-      const res = await app.request("/api/upload", {
-        method: "POST",
-        body: new FormData(),
-      });
-      expect(res.status).toBe(400);
     });
   });
 });

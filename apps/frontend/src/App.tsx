@@ -11,7 +11,7 @@ function AudioRecorder() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
-      
+
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
@@ -31,12 +31,40 @@ function AudioRecorder() {
 
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" })
         const file = new File([audioBlob], "recording.webm", { type: "audio/wav" })
-        const formData = new FormData()
-        formData.append("file", file)
 
         try {
           setUploadStatus("uploading")
-          const response = await fetch("/api/upload", {
+
+          let transcriptId = localStorage.getItem("transcriptId")
+          if (!transcriptId) {
+            const response = await fetch("/api/transcripts", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              // TODO: Session ID is currently hard-coded. This needs to also be in `localStorage`
+              // from login / session creation front-end code.
+              body: JSON.stringify({ sessionId: "session-12345678" }),
+            })
+
+            if (!response.ok) {
+              throw new Error(`Failed to create transcript: ${response.statusText}`)
+            }
+
+            const data = await response.json()
+            transcriptId = data.id
+            if (transcriptId) {
+              localStorage.setItem("transcriptId", transcriptId)
+            } else {
+              throw new Error("Transcript creation response missing ID")
+            }
+          }
+
+          const formData = new FormData()
+          formData.append("sequenceNumber", "0")
+          formData.append("file", file)
+
+          const response = await fetch(`/api/transcripts/${transcriptId}/chunks`, {
             method: "POST",
             body: formData,
           })
@@ -86,10 +114,10 @@ function AudioRecorder() {
       <h1 className="text-2xl font-bold tracking-tight text-slate-800">
         Clinical Scribe
       </h1>
-      
+
       <p className="text-sm text-slate-500 font-medium h-10 flex items-center justify-center">
-        {isRecording 
-          ? "Recording audio... Click to save & upload." 
+        {isRecording
+          ? "Recording audio... Click to save & upload."
           : uploadStatus === "uploading"
           ? "Uploading audio note..."
           : uploadStatus === "success"
@@ -111,8 +139,8 @@ function AudioRecorder() {
             src={isRecording ? "/stop-recording.svg" : "/start-recording.svg"}
             alt={isRecording ? "Stop Recording" : "Start Recording"}
             className={`size-20 transition-all duration-300 ${
-              isRecording 
-                ? 'brightness-110 filter drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]' 
+              isRecording
+                ? 'brightness-110 filter drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]'
                 : 'hover:brightness-105 filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.1)]'
             }`}
           />

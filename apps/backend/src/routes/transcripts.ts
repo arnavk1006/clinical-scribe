@@ -1,9 +1,20 @@
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { transcripts, transcriptChunks, sessions } from "../db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { promises as fs } from "fs";
+import { join, resolve } from "path";
 
 const app = new Hono();
+
+const getUploadDir = () => {
+  if (process.env.UPLOAD_DIR) {
+    return resolve(process.cwd(), process.env.UPLOAD_DIR);
+  }
+  return "/tmp";
+};
+
+const UPLOAD_DIR = getUploadDir();
 
 app.get("/", async (c) => {
   try {
@@ -109,7 +120,7 @@ app.post("/", async (c) => {
     const transcriptExists = await db.query.transcripts.findFirst({
       where: (transcripts, { eq }) => eq(transcripts.id, transcriptId),
     });
-    if (transcriptExists) { 
+    if (transcriptExists) {
       return c.json({error: "Transcript with given ID already exists"}, 409)
     }
 
@@ -149,11 +160,11 @@ app.post("/", async (c) => {
 app.post("/:id/chunks", async (c) => {
   const transcriptId = c.req.param("id");
   try {
-    const body = await c.req.json();
-    const { id, sequenceNumber, location } = body;
+    const body = await c.req.parseBody(); // multipart, not json, now
+    const { sequenceNumber, file } = body;
 
-    if (sequenceNumber === undefined || !location) {
-      return c.json({ error: "SequenceNumber and location are required" }, 400);
+    if (sequenceNumber === undefined || !(file instanceof File)) {
+      return c.json({ error: "sequenceNumber and file are required" }, 400);
     }
 
     const transcriptExists = await db.query.transcripts.findFirst({
@@ -163,16 +174,21 @@ app.post("/:id/chunks", async (c) => {
       return c.json({ error: "Transcript not found" }, 404);
     }
 
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    const extension = file.name?.split(".").pop() || "webm";
+    const fileName = `${crypto.randomUUID()}.${extension}`;
+    const filePath = join(UPLOAD_DIR, fileName);
+    await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+
     const newChunk = {
-      id: id || crypto.randomUUID(),
+      id: crypto.randomUUID(),
       transcriptId,
       sequenceNumber: Number(sequenceNumber),
-      location,
+      location: filePath, // Server-derived
       createdAt: new Date(),
     };
 
     await db.insert(transcriptChunks).values(newChunk);
-
     return c.json(newChunk, 201);
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
