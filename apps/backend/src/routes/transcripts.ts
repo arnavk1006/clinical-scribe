@@ -95,7 +95,7 @@ app.get("/session/:sessionId", async (c) => {
 app.post("/", async (c) => {
   try {
     const body = await c.req.json();
-    const { sessionId, chunks } = body;
+    const { sessionId } = body;
 
     if (!sessionId) {
       return c.json({ error: "SessionId is required" }, 400);
@@ -126,29 +126,10 @@ app.post("/", async (c) => {
 
     await db.insert(transcripts).values(newTranscript);
 
-    const createdChunks = [];
-    if (chunks && Array.isArray(chunks)) {
-      for (const chunk of chunks) {
-        const { id, sequenceNumber, location } = chunk;
-        if (sequenceNumber === undefined || !location) {
-          throw new Error("Each chunk must have a sequenceNumber and location");
-        }
-        const newChunk = {
-          id: id || crypto.randomUUID(),
-          transcriptId,
-          sequenceNumber: Number(sequenceNumber),
-          location,
-          createdAt: now,
-        };
-        await db.insert(transcriptChunks).values(newChunk);
-        createdChunks.push(newChunk);
-      }
-    }
-
     return c.json(
       {
         ...newTranscript,
-        chunks: createdChunks,
+        chunks: [],
       },
       201,
     );

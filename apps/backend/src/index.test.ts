@@ -122,22 +122,12 @@ describe("Clinical Scribe Backend API", () => {
   });
 
   describe("Transcripts Router", () => {
-    it("should create a new transcript with initial chunks", async () => {
+    it("should create a new transcript", async () => {
       const res = await app.request("/api/transcripts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          chunks: [
-            {
-              sequenceNumber: 0,
-              location: "s3://clinical-scribe/transcripts/chunk0.json",
-            },
-            {
-              sequenceNumber: 1,
-              location: "/local/path/to/chunk1.json",
-            },
-          ],
         }),
       });
 
@@ -145,11 +135,26 @@ describe("Clinical Scribe Backend API", () => {
       const data = (await res.json()) as any;
       expect(data).toHaveProperty("id");
       expect(data.sessionId).toBe(sessionId);
-      expect(data.chunks.length).toBe(2);
-      expect(data.chunks[0].sequenceNumber).toBe(0);
-      expect(data.chunks[0].location).toBe("s3://clinical-scribe/transcripts/chunk0.json");
-      expect(data.chunks[1].sequenceNumber).toBe(1);
+      expect(data.chunks.length).toBe(0);
       transcriptId = data.id;
+
+      // Seed chunks directly in database for subsequent tests
+      await db.insert(transcriptChunks).values([
+        {
+          id: crypto.randomUUID(),
+          transcriptId,
+          sequenceNumber: 0,
+          location: "s3://clinical-scribe/transcripts/chunk0.json",
+          createdAt: new Date(),
+        },
+        {
+          id: crypto.randomUUID(),
+          transcriptId,
+          sequenceNumber: 1,
+          location: "/local/path/to/chunk1.json",
+          createdAt: new Date(),
+        },
+      ]);
     });
 
     it("should get transcript by ID with chunks in order", async () => {

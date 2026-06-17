@@ -143,16 +143,9 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 | **GET** | `/` | Retrieves a list of all transcripts, with their ordered chunks populated. |
 | **GET** | `/:id` | Retrieves a single transcript by ID, with its ordered chunks populated. |
 | **GET** | `/session/:sessionId` | Retrieves transcripts associated with a specific session ID, with their chunks. |
-| **POST** | `/` | Creates a new transcript. <br> **Request Body**: `{ sessionId: string, chunks?: Array<{ id?: string, sequenceNumber: number, location: string }> }` (sessionId is required). |
-| **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `{ id?: string, sequenceNumber: number, location: string }` (sequenceNumber and location are required). |
+| **POST** | `/` | Creates a new transcript. <br> **Request Body**: `{ sessionId: string }` (sessionId is required). |
+| **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `multipart/form-data` containing `sequenceNumber` and `file` fields (both are required). |
 | **DELETE** | `/:id` | Deletes a transcript by its ID (this cascades to its chunks in the database). |
-
-### Uploads (`/api/upload`)
-Defined in [apps/backend/src/routes/upload.ts](file:///Users/arnavkohli/src/personal-projects/clinical-scribe/apps/backend/src/routes/upload.ts).
-
-| Method | Path | Description |
-| :--- | :--- | :--- |
-| **POST** | `/` | Uploads an audio recording file. <br> **Request Body**: `multipart/form-data` containing a `file` field. |
 
 ---
 
