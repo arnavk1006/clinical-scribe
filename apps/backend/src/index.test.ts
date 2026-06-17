@@ -214,4 +214,47 @@ describe("Clinical Scribe Backend API", () => {
       expect(chunksAfter.length).toBe(0);
     });
   });
+
+  describe("Upload Router", () => {
+    it("should upload a file and save it to tmp", async () => {
+      const formData = new FormData();
+      const file = new File(["test audio data content"], "test-audio.wav", { type: "audio/wav" });
+      formData.append("file", file);
+
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      expect(res.status).toBe(201);
+      const data = (await res.json()) as any;
+      expect(data).toHaveProperty("location");
+
+      // Verify file exists on disk
+      const { join, resolve } = await import("path");
+      const { promises: fs } = await import("fs");
+
+      let uploadDir: string;
+      if (process.env.UPLOAD_DIR) {
+        uploadDir = resolve(process.cwd(), process.env.UPLOAD_DIR);
+      } else {
+        uploadDir = "/tmp";
+      }
+
+      const fileName = data.location.split("/").pop() || "";
+      const fullPath = join(uploadDir, fileName);
+      const fileContent = await fs.readFile(fullPath, "utf-8");
+      expect(fileContent).toBe("test audio data content");
+
+      await fs.unlink(fullPath);
+    });
+
+    it("should return 400 if no file is provided", async () => {
+      const res = await app.request("/api/upload", {
+        method: "POST",
+        body: new FormData(),
+      });
+      expect(res.status).toBe(400);
+    });
+  });
 });
