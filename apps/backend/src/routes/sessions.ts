@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "../db/client";
 import { sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
+import type { NewSession } from "../types";
 
 const app = new Hono();
 
@@ -92,7 +93,7 @@ app.patch("/:id", async (c) => {
       return c.json({ error: "Session not found" }, 404);
     }
 
-    const updates: Partial<typeof sessions.$inferInsert> = {};
+    const updates: Partial<NewSession> = {};
     if (status !== undefined) {
       if (!["recording", "processing", "transcribed", "reviewed"].includes(status)) {
         return c.json({ error: "Invalid status value" }, 400);

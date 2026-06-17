@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "../db/client";
 import { notes, sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
+import type { NewNote } from "../types";
 
 const app = new Hono();
 
@@ -106,7 +107,7 @@ app.patch("/:id", async (c) => {
       return c.json({ error: "Note not found" }, 404);
     }
 
-    const updates: Partial<typeof notes.$inferInsert> = {};
+    const updates: Partial<NewNote> = {};
     if (subjective !== undefined) updates.subjective = subjective;
     if (objective !== undefined) updates.objective = objective;
     if (assessment !== undefined) updates.assessment = assessment;

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "../db/client";
 import { doctors } from "../db/schema";
 import { eq } from "drizzle-orm";
+import type { NewDoctor } from "../types";
 
 const app = new Hono();
 
@@ -82,7 +83,7 @@ app.patch("/:id", async (c) => {
       return c.json({ error: "Doctor not found" }, 404);
     }
 
-    const updates: Partial<typeof doctors.$inferInsert> = {};
+    const updates: Partial<NewDoctor> = {};
     if (name !== undefined) updates.name = name;
     if (email !== undefined) updates.email = email;
     if (password !== undefined) {
