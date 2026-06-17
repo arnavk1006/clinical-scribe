@@ -36,3 +36,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 ## SQLite files
 *.sqlite3
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal

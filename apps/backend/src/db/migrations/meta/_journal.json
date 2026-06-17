@@ -15,6 +15,13 @@
       "when": 1781649062468,
       "tag": "0001_amazing_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781695264387,
+      "tag": "0002_soft_vargas",
+      "breakpoints": true
     }
   ]
 }

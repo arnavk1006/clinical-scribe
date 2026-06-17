@@ -173,7 +173,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 | **GET** | `/session/:sessionId` | Retrieves transcripts associated with a specific session ID, with their chunks. |
 | **POST** | `/` | Creates a new transcript. <br> **Request Body**: `{ sessionId: string }` (sessionId is required). |
 | **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `multipart/form-data` containing `sequenceNumber` and `file` fields (both are required). |
-| **GET** | `/process/:transcriptId/chunk/:chunkId` | Triggers ffmpeg resampling of the chunk file to 16kHz mono WAV format. |
+| **GET** | `/process/:transcriptId/chunk/:chunkId` | Triggers asynchronous background processing (resampling chunk to 16kHz mono WAV & queuing for STT). Returns `202 Accepted` immediately. |
 | **DELETE** | `/:id` | Deletes a transcript by its ID (this cascades to its chunks in the database). |
 
 ---

@@ -4,6 +4,7 @@ import { transcripts, transcriptChunks, sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { promises as fs } from "fs";
 import { join, resolve } from "path";
+import { transcriptionQueue } from "../services/transcriptionQueue";
 
 const app = new Hono();
 
@@ -122,33 +123,17 @@ app.get("/process/:transcriptId/chunk/:chunkId", async (c) => {
       return c.json({ error: "Chunk file not found on disk" }, 404);
     }
 
-    const inputFileName = inputPath.split(/[\\/]/).pop() || "";
-    const fileNameWithoutExt = inputFileName.substring(0, inputFileName.lastIndexOf(".")) || inputFileName;
-    const outputPath = join(UPLOAD_DIR, `${fileNameWithoutExt}_16k.wav`);
+    await db
+      .update(transcriptChunks)
+      .set({ status: "processing" })
+      .where(eq(transcriptChunks.id, chunkId));
 
-    const proc = Bun.spawn([
-      "ffmpeg",
-      "-y",
-      "-nostdin",
-      "-i",
-      inputPath,
-      "-ar",
-      "16000",
-      "-ac",
-      "1",
-      "-c:a",
-      "pcm_s16le",
-      outputPath,
-    ]);
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) {
-      throw new Error(`ffmpeg exited with code ${exitCode}`);
-    }
+    transcriptionQueue.enqueue({ transcriptId, chunkId });
 
     return c.json({
-      message: "Processed successfully",
-      outputPath,
-    }, 200);
+      message: "Processing started in the background",
+      status: "processing",
+    }, 202);
   } catch (error: any) { 
     return c.json({ error: error.message }, 500);
   }

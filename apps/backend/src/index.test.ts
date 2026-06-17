@@ -301,7 +301,7 @@ describe("Clinical Scribe Backend API", () => {
         expect(data.error).toContain("Chunk file not found on disk");
       });
 
-      it("should process the chunk using ffmpeg successfully and return 200", async () => {
+      it("should process the chunk in the background successfully and return 202", async () => {
         const { promises: fs } = await import("fs");
         
         // Use Bun.spawn to safely generate the silent audio file
@@ -321,16 +321,33 @@ describe("Clinical Scribe Backend API", () => {
         expect(exitCode).toBe(0);
 
         const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/${processChunkId}`);
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(202);
         const data = await res.json() as any;
-        expect(data.message).toBe("Processed successfully");
-        expect(data.outputPath).toContain("_16k.wav");
+        expect(data.message).toBe("Processing started in the background");
+        expect(data.status).toBe("processing");
 
-        await fs.access(data.outputPath);
+        // Poll DB to verify async execution completes
+        let chunkInDb;
+        for (let i = 0; i < 30; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          chunkInDb = await db.query.transcriptChunks.findFirst({
+            where: (chunks, { eq }) => eq(chunks.id, processChunkId),
+          });
+          if (chunkInDb && (chunkInDb.status === "completed" || chunkInDb.status === "failed")) {
+            break;
+          }
+        }
+
+        expect(chunkInDb).toBeDefined();
+        expect(chunkInDb!.status).toBe("completed");
+        expect(chunkInDb!.transcribedText).toBe("Mock transcribed text placeholder.");
+        expect(chunkInDb!.processedLocation).toBeDefined();
+
+        await fs.access(chunkInDb!.processedLocation!);
 
         try {
           await fs.unlink(correctFilePath);
-          await fs.unlink(data.outputPath);
+          await fs.unlink(chunkInDb!.processedLocation!);
         } catch (err) {
           // Ignore errors
         }

@@ -169,7 +169,7 @@ function AudioRecorder() {
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-tr from-slate-50 to-slate-100 text-slate-800 font-sans p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-tr from-slate-50 to-slate-100 text-slate-800 font-sans p-6">
       <AudioRecorder />
     </div>
   )

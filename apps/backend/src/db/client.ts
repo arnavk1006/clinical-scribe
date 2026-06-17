@@ -9,6 +9,7 @@ const dbPath = process.env.DATABASE_PATH ?? "./data/clinical-scribe.sqlite";
 mkdirSync(dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath);
+sqlite.run("PRAGMA journal_mode = WAL");
 sqlite.run("PRAGMA foreign_keys = ON");
 
 export const db = drizzle(sqlite, { schema });

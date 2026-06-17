@@ -16,5 +16,10 @@ export const transcriptChunks = sqliteTable("transcript_chunks", {
     .references(() => transcripts.id, { onDelete: "cascade" }),
   sequenceNumber: integer("sequence_number").notNull(),
   location: text("location").notNull(),
+  processedLocation: text("processed_location"),
+  status: text("status", { enum: ["pending", "processing", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  transcribedText: text("transcribed_text"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
