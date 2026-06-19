@@ -41,7 +41,7 @@ class TranscriptionQueue {
     const task = this.queue.shift()!;
 
     try {
-      await this.processChunk(task.transcriptId, task.chunkId);
+      await this.processChunk(task.chunkId);
     } catch (err) {
       console.error(`Failed to process chunk ${task.chunkId}:`, err);
       // Mark chunk as failed in the DB on error
@@ -51,7 +51,11 @@ class TranscriptionQueue {
         .where(eq(transcriptChunks.id, task.chunkId));
     } finally {
       this.isProcessing = false;
-      // Trigger processing of next item on next tick to avoid stack overflow/recursion
+      // Yields control back to the event loop. This converts synchronous recursion 
+      // into an async loop, clearing the call stack to prevent a stack overflow 
+      // when processing long queues.
+      // The `processNext` task is put on the MacroTask queue, which has the least
+      // priority for processing.
       setTimeout(() => this.processNext(), 0);
     }
   }
@@ -63,7 +67,7 @@ class TranscriptionQueue {
    * 3. Saves resampled path to DB
    * 4. Enters transcription step
    */
-  private async processChunk(transcriptId: string, chunkId: string) {
+  private async processChunk(chunkId: string) {
     await db
       .update(transcriptChunks)
       .set({ status: "processing" })
@@ -108,32 +112,42 @@ class TranscriptionQueue {
       .set({ processedLocation: outputPath })
       .where(eq(transcriptChunks.id, chunkId));
 
-    await this.transcribeChunk(transcriptId, chunkId, outputPath);
+    await this.transcribeChunk(chunkId, outputPath);
   }
 
   /**
    * Transcribes a resampled WAV file using the STT model.
-   * Implementation is stubbed for now.
    */
-  private async transcribeChunk(
-    transcriptId: string,
-    chunkId: string,
-    processedPath: string
-  ) {
-    // TODO: Implement actual whisper.cpp speech-to-text processing here in the next step.
-    console.log(
-      `[STT Stub] Transcribing processed audio at ${processedPath} for chunk ${chunkId}`
-    );
+   private async transcribeChunk(
+      chunkId: string,
+      processedPath: string
+    ) {
+      const whisperRequestBody = new FormData();
+      whisperRequestBody.append('file', Bun.file(processedPath));
+      whisperRequestBody.append('response_format', 'json');
 
-    // Mark as completed
-    await db
-      .update(transcriptChunks)
-      .set({
-        status: "completed",
-        transcribedText: "Mock transcribed text placeholder.",
-      })
-      .where(eq(transcriptChunks.id, chunkId));
-  }
+      const res = await fetch(`${process.env.WHISPER_SERVER_URL}/inference`, {
+        method: 'POST',
+        body: whisperRequestBody,
+      });
+
+      if (!res.ok) {
+        throw new Error(`whisper-server returned ${res.status}: ${await res.text()}`);
+      }
+
+      const data = await res.json();
+      if (data && typeof data === 'object' && 'text' in data) {
+        await db
+          .update(transcriptChunks)
+          .set({
+            status: "completed",
+            transcribedText: (data as { text: string }).text,
+          })
+          .where(eq(transcriptChunks.id, chunkId));
+      } else {
+        throw new Error(`whisper-server returned invalid response format: ${JSON.stringify(data)}`);
+      }
+    }
 }
 
 export const transcriptionQueue = new TranscriptionQueue();

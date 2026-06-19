@@ -19,7 +19,7 @@ graph TD
     Backend -->|Native STT| NativeWhisper[Native whisper.cpp + Local LLM]
     
     Client -->|Mode 2: Cloud Hybrid| CloudBackend[Secure API Proxy]
-    CloudBackend -->|Cloud APIs| CloudSTT[OpenAI/Deepgram/Gemini APIs]
+    CloudBackend -->|Cloud APIs| CloudSTT[OpenAI/SarvamAI/Gemini APIs]
     
     Client -->|Mode 3: Fully On-Device| WASM[Browser WASM Sandbox]
     WASM -->|WASM STT| WASMWhisper[ffmpeg.wasm + whisper.wasm + Web Workers]
