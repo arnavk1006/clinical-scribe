@@ -217,8 +217,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
   - [ ] Create new session
   - [x] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
   - [x] Resample audio chunks to 16kHz mono WAV format using ffmpeg (`GET /process/:transcriptId/chunk/:chunkId`)
-  - [ ] Trigger note creation, which kicks off whisper.cpp on the saved chunks and produces a notes file
-- [ ] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
+- [x] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 
 ### Phase 2: SOAP note + prescription generation

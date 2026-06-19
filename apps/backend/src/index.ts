@@ -7,26 +7,28 @@ import transcriptsRouter from "./routes/transcripts";
 
 export const app = new Hono();
 
-app.get("/", (c) => {
-  return c.json({
-    status: "ok",
-    message: "Clinical Scribe API is running",
-    endpoints: {
-      patients: "/api/patients",
-      doctors: "/api/doctors",
-      sessions: "/api/sessions",
-      notes: "/api/notes",
-      transcripts: "/api/transcripts",
-      upload: "/api/upload",
-    },
-  });
-});
+const routes = app
+  .get("/", (c) => {
+    return c.json({
+      status: "ok",
+      message: "Clinical Scribe API is running",
+      endpoints: {
+        patients: "/api/patients",
+        doctors: "/api/doctors",
+        sessions: "/api/sessions",
+        notes: "/api/notes",
+        transcripts: "/api/transcripts",
+        upload: "/api/upload",
+      },
+    });
+  })
+  .route("/api/patients", patientsRouter)
+  .route("/api/doctors", doctorsRouter)
+  .route("/api/sessions", sessionsRouter)
+  .route("/api/notes", notesRouter)
+  .route("/api/transcripts", transcriptsRouter);
 
-app.route("/api/patients", patientsRouter);
-app.route("/api/doctors", doctorsRouter);
-app.route("/api/sessions", sessionsRouter);
-app.route("/api/notes", notesRouter);
-app.route("/api/transcripts", transcriptsRouter);
+export type AppType = typeof routes;
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 console.log(`Server is running on port ${port}...`);

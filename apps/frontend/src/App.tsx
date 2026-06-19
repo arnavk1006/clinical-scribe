@@ -1,4 +1,8 @@
 import { useState, useRef } from "react"
+import { hc } from "hono/client"
+import type { AppType } from "../../backend/src/index"
+
+const client = hc<AppType>("/")
 
 function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false)
@@ -9,7 +13,8 @@ function AudioRecorder() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = navigator.mediaDevices ? await navigator.mediaDevices.getUserMedia({ audio: true }) : null
+      if (!stream) throw new Error("MediaDevices not supported")
       streamRef.current = stream
 
       const mediaRecorder = new MediaRecorder(stream)
@@ -37,14 +42,8 @@ function AudioRecorder() {
 
           let transcriptId = localStorage.getItem("transcriptId")
           if (!transcriptId) {
-            const response = await fetch("/api/transcripts", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              // TODO: Session ID is currently hard-coded. This needs to also be in `localStorage`
-              // from login / session creation front-end code.
-              body: JSON.stringify({ sessionId: "session-12345678" }),
+            const response = await client.api.transcripts.$post({
+              json: { sessionId: "session-12345678" },
             })
 
             if (!response.ok) {
@@ -52,6 +51,9 @@ function AudioRecorder() {
             }
 
             const data = await response.json()
+            if ("error" in data) {
+              throw new Error(data.error as string)
+            }
             transcriptId = data.id
             if (transcriptId) {
               localStorage.setItem("transcriptId", transcriptId)
@@ -60,13 +62,12 @@ function AudioRecorder() {
             }
           }
 
-          const formData = new FormData()
-          formData.append("sequenceNumber", "0")
-          formData.append("file", file)
-
-          const response = await fetch(`/api/transcripts/${transcriptId}/chunks`, {
-            method: "POST",
-            body: formData,
+          const response = await client.api.transcripts[":id"].chunks.$post({
+            param: { id: transcriptId },
+            form: {
+              sequenceNumber: "0",
+              file: file,
+            },
           })
 
           if (response.ok) {

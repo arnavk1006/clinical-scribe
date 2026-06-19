@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "bun:test";
+import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { app } from "./index";
 import { db } from "./db/client";
 import { patients, doctors, sessions, transcripts, transcriptChunks, notes } from "./db/schema";
@@ -233,8 +233,22 @@ describe("Clinical Scribe Backend API", () => {
       let processTranscriptId: string;
       let processChunkId: string;
       let correctFilePath: string;
-
+      let originalFetch: any;
       beforeAll(async () => {
+        originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (input: any, init: any) => {
+          const url = typeof input === "string" 
+            ? input 
+            : (input instanceof Request ? input.url : String(input));
+          if (url.includes("/inference")) {
+            return new Response(JSON.stringify({ text: "Mock transcribed text placeholder." }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          return originalFetch(input, init);
+        }) as any;
+
         // Seed an isolated session to prevent side effects in other tests
         processSessionId = `session-process-${crypto.randomUUID()}`;
         await db.insert(sessions).values({
@@ -263,6 +277,10 @@ describe("Clinical Scribe Backend API", () => {
           location: correctFilePath,
           createdAt: new Date(),
         });
+      });
+
+      afterAll(async () => {
+        globalThis.fetch = originalFetch;
       });
 
       it("should return 404 if the transcript does not exist", async () => {
