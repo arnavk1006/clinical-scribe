@@ -4,7 +4,7 @@ import { transcripts, transcriptChunks } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { promises as fs } from "fs";
 import { join, resolve } from "path";
-import { transcriptionQueue } from "../services/transcriptionQueue";
+import { transcriptionQueue } from "../transcription/queue";
 import { validator } from "hono/validator";
 
 const getUploadDir = () => {
@@ -125,7 +125,8 @@ const routes = new Hono()
         .set({ status: "processing" })
         .where(eq(transcriptChunks.id, chunkId));
 
-      transcriptionQueue.enqueue({ transcriptId, chunkId });
+      // TODO: Add a priority parameter for various plan types.
+      await transcriptionQueue.add("transcription", { chunkId });
 
       return c.json({
         message: "Processing started in the background",

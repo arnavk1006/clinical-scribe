@@ -217,8 +217,9 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
   - [x] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
   - [x] Resample audio chunks to 16kHz mono WAV format using ffmpeg (`GET /process/:transcriptId/chunk/:chunkId`)
 - [x] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
-- [ ] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
-- [ ] Integrate metrics + views for BullMQ queue, as well as drizzle DB
+- [x] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
+- [x] Integrate metrics + views for BullMQ queue
+- [ ] Integrate views for drizzle ORM
 - [ ] With `turbo`, create a build system for the monorepo.
 - [ ] Create new session, and session handling
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
@@ -230,6 +231,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 
 ### Phase 3: Compliance and security hardening
 - [ ] Add authentication and role-based access control (a doctor should only see their own patients' sessions, at minimum).
+- [ ] Add protection from various forms of compromise of back-end data. This involves securing the views of BullMQ and Drizzle from external viewing on PROD.
 - [ ] Add audit logging for note edits and prescription changes — who changed what, when (this is also necessary to make `doctorEdited` actually meaningful for hospital recordkeeping).
 - [ ] Encrypt data at rest (patient PII, transcripts, notes) and define an explicit retention policy rather than indefinite-by-default storage — most jurisdictions set retention minimums and rules, not an "indefinite" default.
 - [ ] Write up an honest compliance posture doc: what's actually covered (self-hosted private infrastructure, no third-party audio/data transmission) vs. what would still be required for real HIPAA compliance in production (BAAs, formal risk assessment, breach notification process).

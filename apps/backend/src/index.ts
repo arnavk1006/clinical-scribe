@@ -4,6 +4,8 @@ import doctorsRouter from "./routes/doctors";
 import sessionsRouter from "./routes/sessions";
 import notesRouter from "./routes/notes";
 import transcriptsRouter from "./routes/transcripts";
+import { serverAdapter } from "./transcription/queue";
+import "./transcription/worker";
 
 export const app = new Hono();
 
@@ -19,6 +21,7 @@ const routes = app
         notes: "/api/notes",
         transcripts: "/api/transcripts",
         upload: "/api/upload",
+        queues: "/admin/queues",
       },
     });
   })
@@ -26,7 +29,8 @@ const routes = app
   .route("/api/doctors", doctorsRouter)
   .route("/api/sessions", sessionsRouter)
   .route("/api/notes", notesRouter)
-  .route("/api/transcripts", transcriptsRouter);
+  .route("/api/transcripts", transcriptsRouter)
+  .route("/admin/queues", serverAdapter.registerPlugin());
 
 export type AppType = typeof routes;
 

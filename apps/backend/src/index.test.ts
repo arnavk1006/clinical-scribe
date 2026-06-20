@@ -235,6 +235,7 @@ describe("Clinical Scribe Backend API", () => {
       let correctFilePath: string;
       let originalFetch: any;
       beforeAll(async () => {
+        process.env.WHISPER_SERVER_URL = "http://localhost:5000";
         originalFetch = globalThis.fetch;
         globalThis.fetch = (async (input: any, init: any) => {
           const url = typeof input === "string" 

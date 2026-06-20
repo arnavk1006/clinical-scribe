@@ -2,6 +2,8 @@
   "name": "clinical-scribe-backend",
   "module": "index.ts",
   "dependencies": {
+    "@bull-board/api": "^8.0.1",
+    "@bull-board/hono": "^8.0.1",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.25"
   },
