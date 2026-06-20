@@ -17,7 +17,7 @@ export const transcriptChunks = sqliteTable("transcript_chunks", {
   sequenceNumber: integer("sequence_number").notNull(),
   location: text("location").notNull(),
   processedLocation: text("processed_location"),
-  status: text("status", { enum: ["pending", "processing", "completed", "failed"] })
+  status: text("status", { enum: ["pending", "processing", "completed", "retrying", "failed"] })
     .notNull()
     .default("pending"),
   transcribedText: text("transcribed_text"),

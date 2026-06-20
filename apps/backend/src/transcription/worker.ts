@@ -89,10 +89,15 @@ export const transcriptionWorker = new Worker(
     } catch (error: any) {
       // Worker returns a promise on completion, which doesn't happen in case
       // an error is thrown. This tells the queue there needs to be a retry.
-      console.error(`Failed to process chunk ${chunkId}:`, error);
+
+      const attemptsMade = job.attemptsMade;
+      const totalAttempts = job.opts.attempts ?? 1;
+      
+      console.error(`Failed to process chunk ${chunkId} (attempt ${attemptsMade}/${totalAttempts}):`, error);
+      
       await db
         .update(transcriptChunks)
-        .set({ status: "failed" })
+        .set({ status: attemptsMade < totalAttempts ? "retrying": "failed" })
         .where(eq(transcriptChunks.id, chunkId));
       throw error;
     }
