@@ -322,7 +322,6 @@ describe("Clinical Scribe Backend API", () => {
       it("should process the chunk in the background successfully and return 202", async () => {
         const { promises: fs } = await import("fs");
         
-        // Use Bun.spawn to safely generate the silent audio file
         const proc = Bun.spawn([
           "ffmpeg",
           "-y",

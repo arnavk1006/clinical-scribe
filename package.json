@@ -15,5 +15,9 @@
     "lint": "bun --filter clinical-scribe-frontend lint",
     "build": "bun --filter clinical-scribe-frontend build",
     "test": "bun --filter clinical-scribe-backend test"
+  },
+  "dependencies": {
+    "bullmq": "^5.79.0",
+    "ioredis": "^5.11.1"
   }
 }

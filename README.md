@@ -214,10 +214,13 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
   - [x] Start/stop audio recording on the frontend using MediaRecorder
   - [x] Upload audio recordings directly to the backend
   - [x] Save audio files locally on the backend
-  - [ ] Create new session
   - [x] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
   - [x] Resample audio chunks to 16kHz mono WAV format using ffmpeg (`GET /process/:transcriptId/chunk/:chunkId`)
 - [x] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
+- [ ] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
+- [ ] Integrate metrics + views for BullMQ queue, as well as drizzle DB
+- [ ] With `turbo`, create a build system for the monorepo.
+- [ ] Create new session, and session handling
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 
 ### Phase 2: SOAP note + prescription generation
