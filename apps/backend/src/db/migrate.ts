@@ -5,7 +5,10 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 
-const dbPath = process.env.DATABASE_PATH ?? "./data/clinical-scribe.sqlite";
+if (!process.env.DATABASE_PATH) {
+  throw new Error("DATABASE_PATH environment variable is not set");
+}
+const dbPath = process.env.DATABASE_PATH;
 mkdirSync(dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath);

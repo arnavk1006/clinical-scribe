@@ -12,7 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      PORT: 3000
       REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      DATABASE_PATH: ./data/clinical-scribe.sqlite
+      UPLOAD_DIR: /tmp
+      WHISPER_SERVER_URL: http://localhost:8080
 
     services:
       redis:

@@ -34,7 +34,10 @@ const routes = app
 
 export type AppType = typeof routes;
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+if (!process.env.PORT) {
+  throw new Error("PORT environment variable is not set");
+}
+const port = parseInt(process.env.PORT, 10);
 console.log(`Server is running on port ${port}...`);
 
 // Validate system dependencies

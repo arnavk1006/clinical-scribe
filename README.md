@@ -212,8 +212,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 | **GET** | `/:id` | Retrieves a single transcript by ID, with its ordered chunks populated. |
 | **GET** | `/session/:sessionId` | Retrieves transcripts associated with a specific session ID, with their chunks. |
 | **POST** | `/` | Creates a new transcript. <br> **Request Body**: `{ sessionId: string }` (sessionId is required). |
-| **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID. <br> **Request Body**: `multipart/form-data` containing `sequenceNumber` and `file` fields (both are required). |
-| **GET** | `/process/:transcriptId/chunk/:chunkId` | Triggers asynchronous background processing (resampling chunk to 16kHz mono WAV & queuing for STT). Returns `202 Accepted` immediately. |
+| **POST** | `/:id/chunks` | Appends/creates a new transcript chunk for the specified transcript ID and automatically queues it for background processing. <br> **Request Body**: `multipart/form-data` containing `sequenceNumber` and `file` fields (both are required). |
 | **DELETE** | `/:id` | Deletes a transcript by its ID (this cascades to its chunks in the database). |
 
 ---
@@ -225,8 +224,8 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
   - [x] Start/stop audio recording on the frontend using MediaRecorder
   - [x] Upload audio recordings directly to the backend
   - [x] Save audio files locally on the backend
-  - [x] On confirmation, send chunk metadata to the server (`POST /:id/chunks`)
-  - [x] Resample audio chunks to 16kHz mono WAV format using ffmpeg (`GET /process/:transcriptId/chunk/:chunkId`)
+  - [x] On confirmation, send chunk file and metadata to the server (`POST /:id/chunks`)
+  - [x] Automatically resample audio chunks to 16kHz mono WAV format using ffmpeg and transcribe via a background queue (BullMQ)
 - [x] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
 - [x] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
 - [x] Integrate metrics + views for BullMQ queue

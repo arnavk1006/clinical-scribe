@@ -228,12 +228,12 @@ describe("Clinical Scribe Backend API", () => {
       expect(chunksAfter.length).toBe(0);
     });
 
-    describe("Process Transcript Chunk", () => {
+    describe("Upload and Automatically Process Transcript Chunk", () => {
       let processSessionId: string;
       let processTranscriptId: string;
-      let processChunkId: string;
       let correctFilePath: string;
       let originalFetch: any;
+
       beforeAll(async () => {
         process.env.WHISPER_SERVER_URL = "http://localhost:5000";
         originalFetch = globalThis.fetch;
@@ -268,61 +268,17 @@ describe("Clinical Scribe Backend API", () => {
         const data = (await res.json()) as any;
         processTranscriptId = data.id;
 
-        processChunkId = crypto.randomUUID();
         correctFilePath = `/tmp/${crypto.randomUUID()}.wav`;
-
-        await db.insert(transcriptChunks).values({
-          id: processChunkId,
-          transcriptId: processTranscriptId,
-          sequenceNumber: 0,
-          location: correctFilePath,
-          createdAt: new Date(),
-        });
       });
 
       afterAll(async () => {
         globalThis.fetch = originalFetch;
       });
 
-      it("should return 404 if the transcript does not exist", async () => {
-        const res = await app.request(`/api/transcripts/process/non-existent-transcript/chunk/${processChunkId}`);
-        expect(res.status).toBe(404);
-        const data = await res.json() as any;
-        expect(data.error).toContain("Transcript not found");
-      });
-
-      it("should return 404 if the chunk does not exist", async () => {
-        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/non-existent-chunk`);
-        expect(res.status).toBe(404);
-        const data = await res.json() as any;
-        expect(data.error).toContain("Chunk not found");
-      });
-
-      it("should return 400 if the chunk belongs to a different transcript", async () => {
-        const otherRes = await app.request("/api/transcripts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: processSessionId }),
-        });
-        const otherData = (await otherRes.json()) as any;
-        const otherTranscriptId = otherData.id;
-
-        const res = await app.request(`/api/transcripts/process/${otherTranscriptId}/chunk/${processChunkId}`);
-        expect(res.status).toBe(400);
-        const data = await res.json() as any;
-        expect(data.error).toContain("Chunk does not belong to the given transcript");
-      });
-
-      it("should return 404 if the physical chunk file is missing on disk", async () => {
-        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/${processChunkId}`);
-        expect(res.status).toBe(404);
-        const data = await res.json() as any;
-        expect(data.error).toContain("Chunk file not found on disk");
-      });
-
-      it("should process the chunk in the background successfully and return 202", async () => {
+      it("should automatically process the chunk in the background upon upload", async () => {
         const { promises: fs } = await import("fs");
         
+        // Generate a valid dummy audio file on disk first
         const proc = Bun.spawn([
           "ffmpeg",
           "-y",
@@ -338,18 +294,30 @@ describe("Clinical Scribe Backend API", () => {
         const exitCode = await proc.exited;
         expect(exitCode).toBe(0);
 
-        const res = await app.request(`/api/transcripts/process/${processTranscriptId}/chunk/${processChunkId}`);
-        expect(res.status).toBe(202);
+        // Read the generated file and construct the form upload
+        const audioBuffer = await fs.readFile(correctFilePath);
+        const file = new File([audioBuffer], "chunk0.wav", { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("sequenceNumber", "0");
+        formData.append("file", file);
+
+        const res = await app.request(`/api/transcripts/${processTranscriptId}/chunks`, {
+          method: "POST",
+          body: formData,
+        });
+
+        expect(res.status).toBe(201);
         const data = await res.json() as any;
-        expect(data.message).toBe("Processing started in the background");
+        expect(data.transcriptId).toBe(processTranscriptId);
         expect(data.status).toBe("processing");
+        const chunkId = data.id;
 
         // Poll DB to verify async execution completes
         let chunkInDb;
         for (let i = 0; i < 30; i++) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           chunkInDb = await db.query.transcriptChunks.findFirst({
-            where: (chunks, { eq }) => eq(chunks.id, processChunkId),
+            where: (chunks, { eq }) => eq(chunks.id, chunkId),
           });
           if (chunkInDb && (chunkInDb.status === "completed" || chunkInDb.status === "failed")) {
             break;
@@ -363,9 +331,11 @@ describe("Clinical Scribe Backend API", () => {
 
         await fs.access(chunkInDb!.processedLocation!);
 
+        // Clean up both uploaded file on server disk and processed 16k wav
         try {
-          await fs.unlink(correctFilePath);
-          await fs.unlink(chunkInDb!.processedLocation!);
+          await fs.unlink(data.location); // uploaded file path
+          await fs.unlink(correctFilePath); // local temp file
+          await fs.unlink(chunkInDb!.processedLocation!); // processed file path
         } catch (err) {
           // Ignore errors
         }

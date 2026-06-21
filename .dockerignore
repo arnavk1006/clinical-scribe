@@ -1,0 +1,28 @@
+# Ignore dependency folders
+node_modules/
+apps/*/node_modules/
+
+# Ignore git and CI config
+.git
+.github/
+
+# Ignore build outputs and caches
+.turbo/
+.next/
+dist/
+apps/*/dist/
+
+# Ignore local database and upload data
+data/
+apps/backend/data/
+*.db
+*.sqlite
+**/*.db
+**/*.sqlite
+
+# Ignore environment files and logs
+.env
+.env.local
+.env.development
+.env.production
+*.log

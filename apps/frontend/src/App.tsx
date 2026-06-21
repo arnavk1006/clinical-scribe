@@ -40,7 +40,7 @@ function AudioRecorder() {
         try {
           setUploadStatus("uploading")
 
-          let transcriptId = localStorage.getItem("transcriptId")
+          let transcriptId = sessionStorage.getItem("transcriptId")
           if (!transcriptId) {
             const response = await client.api.transcripts.$post({
               json: { sessionId: "session-12345678" },
@@ -56,7 +56,7 @@ function AudioRecorder() {
             }
             transcriptId = data.id
             if (transcriptId) {
-              localStorage.setItem("transcriptId", transcriptId)
+              sessionStorage.setItem("transcriptId", transcriptId)
             } else {
               throw new Error("Transcript creation response missing ID")
             }

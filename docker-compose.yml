@@ -15,16 +15,17 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: clinical-scribe-backend
-    command: ["bun", "run", "dev:backend"]
+    command: ["sh", "-c", "if [ ! -f ./apps/backend/data/clinical-scribe.sqlite ]; then IS_NEW=true; fi && bun run db:migrate && if [ \"$$IS_NEW\" = \"true\" ]; then bun run db:seed; fi && bun run dev:backend"]
     ports:
       - "127.0.0.1:${PORT:-3000}:3000"
     environment:
       - PORT=${PORT:-3000}
-      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - DATABASE_PATH=${DATABASE_PATH:-./data/clinical-scribe.sqlite}
-      - WHISPER_SERVER_URL=${WHISPER_SERVER_URL:-http://host.docker.internal:8080}
+      - WHISPER_SERVER_URL=http://host.docker.internal:8080
       - UPLOAD_DIR=${UPLOAD_DIR:-/private/tmp}
+      - MSGPACKR_NATIVE_ACCELERATION_DISABLED=${MSGPACKR_NATIVE_ACCELERATION_DISABLED:-true}
     depends_on:
       - redis
     volumes:
@@ -44,6 +45,7 @@ services:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
     environment:
       - BACKEND_URL=http://backend:3000
+      - MSGPACKR_NATIVE_ACCELERATION_DISABLED=${MSGPACKR_NATIVE_ACCELERATION_DISABLED:-true}
     depends_on:
       - backend
     extra_hosts:

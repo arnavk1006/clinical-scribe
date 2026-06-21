@@ -5,11 +5,16 @@ import { eq } from "drizzle-orm";
 import { redisConnection } from "./queue";
 import { join, resolve } from "path";
 
+if (!process.env.WHISPER_SERVER_URL) {
+  throw new Error("WHISPER_SERVER_URL environment variable is not set");
+}
+
+if (!process.env.UPLOAD_DIR) {
+  throw new Error("UPLOAD_DIR environment variable is not set");
+}
+
 const getUploadDir = () => {
-  if (process.env.UPLOAD_DIR) {
-    return resolve(process.cwd(), process.env.UPLOAD_DIR);
-  }
-  return "/tmp";
+  return resolve(process.cwd(), process.env.UPLOAD_DIR!);
 };
 
 export const transcriptionWorker = new Worker(

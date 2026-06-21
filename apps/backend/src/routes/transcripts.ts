@@ -7,14 +7,11 @@ import { join, resolve } from "path";
 import { transcriptionQueue } from "../transcription/queue";
 import { validator } from "hono/validator";
 
-const getUploadDir = () => {
-  if (process.env.UPLOAD_DIR) {
-    return resolve(process.cwd(), process.env.UPLOAD_DIR);
-  }
-  return "/tmp";
-};
+if (!process.env.UPLOAD_DIR) {
+  throw new Error("UPLOAD_DIR environment variable is not set");
+}
 
-const UPLOAD_DIR = getUploadDir();
+const UPLOAD_DIR = resolve(process.cwd(), process.env.UPLOAD_DIR);
 
 const routes = new Hono()
   .get("/", async (c) => {
@@ -87,52 +84,6 @@ const routes = new Hono()
 
       return c.json(result);
     } catch (error: any) {
-      return c.json({ error: error.message }, 500);
-    }
-  })
-  .get("/process/:transcriptId/chunk/:chunkId", async (c) => {
-    const transcriptId = c.req.param("transcriptId");
-    const chunkId = c.req.param("chunkId");
-    try {
-      const transcriptExists = await db.query.transcripts.findFirst({
-        where: (transcripts, { eq }) => eq(transcripts.id, transcriptId),
-      });
-      if (!transcriptExists) {
-        return c.json({ error: "Transcript not found" }, 404);
-      }
-
-      const chunk = await db.query.transcriptChunks.findFirst({
-        where: (chunks, { eq }) => eq(chunks.id, chunkId),
-      });
-      if (!chunk) {
-        return c.json({ error: "Chunk not found" }, 404);
-      }
-
-      if (chunk.transcriptId !== transcriptId) {
-        return c.json({ error: "Chunk does not belong to the given transcript" }, 400);
-      }
-
-      const inputPath = chunk.location;
-
-      try {
-        await fs.access(inputPath);
-      } catch {
-        return c.json({ error: "Chunk file not found on disk" }, 404);
-      }
-
-      await db
-        .update(transcriptChunks)
-        .set({ status: "processing" })
-        .where(eq(transcriptChunks.id, chunkId));
-
-      // TODO: Add a priority parameter for various plan types.
-      await transcriptionQueue.add("transcription", { chunkId });
-
-      return c.json({
-        message: "Processing started in the background",
-        status: "processing",
-      }, 202);
-    } catch (error: any) { 
       return c.json({ error: error.message }, 500);
     }
   })
@@ -224,10 +175,15 @@ const routes = new Hono()
           transcriptId,
           sequenceNumber: Number(sequenceNumber),
           location: filePath, // Server-derived
+          status: "processing" as const,
           createdAt: new Date(),
         };
 
         await db.insert(transcriptChunks).values(newChunk);
+
+        // Add the uploaded chunk to the BullMQ transcription queue
+        await transcriptionQueue.add("transcription", { chunkId: newChunk.id });
+
         return c.json(newChunk, 201);
       } catch (error: any) {
         return c.json({ error: error.message }, 500);

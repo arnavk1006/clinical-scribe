@@ -1,6 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["REDIS_HOST", "REDIS_PORT"],
+  "globalEnv": [
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "PORT",
+    "DATABASE_PATH",
+    "WHISPER_SERVER_URL",
+    "UPLOAD_DIR",
+    "MSGPACKR_NATIVE_ACCELERATION_DISABLED",
+    "BACKEND_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

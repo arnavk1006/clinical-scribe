@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Disable msgpackr native acceleration to prevent Bun crashes due to unsupported libuv functions in native modules (e.g. uv_version_string)
+ENV MSGPACKR_NATIVE_ACCELERATION_DISABLED=true
+
 # Copy lockfile and package configuration for all workspaces
 COPY package.json bun.lock ./
 COPY apps/backend/package.json ./apps/backend/
