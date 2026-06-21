@@ -29,6 +29,7 @@ export const transcriptionQueue = new Queue<TranscriptionTask>("transcription", 
 });
 
 export const serverAdapter = new HonoAdapter(serveStatic);
+serverAdapter.setBasePath("/admin/queues");
 
 createBullBoard({
   queues: [new BullMQAdapter(transcriptionQueue)],

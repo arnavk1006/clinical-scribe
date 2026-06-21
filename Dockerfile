@@ -1,9 +1,13 @@
 # Use the official Bun base image (Debian-based)
 FROM oven/bun:1-slim AS base
 
-# Install system dependencies (ffmpeg is required for audio processing/resampling)
+# Install system dependencies (ffmpeg for audio, python3/build-essential for compiling native C++ modules, nodejs/npm for running tools like drizzle-kit studio)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    python3 \
+    build-essential \
+    nodejs \
+    npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

@@ -17,7 +17,8 @@
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
-    "db:setup": "bun run db:generate && bun run db:migrate && bun run db:seed"
+    "db:setup": "bun run db:generate && bun run db:migrate && bun run db:seed",
+    "docker:dev": "./scripts/start-all.sh"
   },
   "dependencies": {
     "@bull-board/api": "^8.0.1",

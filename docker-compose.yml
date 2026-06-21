@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   # Redis cache/queue server for BullMQ
   redis:
     image: redis:7-alpine
     container_name: clinical-scribe-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     restart: always
@@ -19,7 +17,7 @@ services:
     container_name: clinical-scribe-backend
     command: ["bun", "run", "dev:backend"]
     ports:
-      - "${PORT:-3000}:3000"
+      - "127.0.0.1:${PORT:-3000}:3000"
     environment:
       - PORT=${PORT:-3000}
       - REDIS_HOST=${REDIS_HOST:-redis}
@@ -43,11 +41,29 @@ services:
     container_name: clinical-scribe-frontend
     command: ["bun", "run", "dev:frontend"]
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - BACKEND_URL=http://backend:3000
     depends_on:
       - backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # Drizzle Studio Database Viewer
+  db-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinical-scribe-db-studio
+    working_dir: /app/apps/backend
+    command: ["nodejs", "/app/node_modules/drizzle-kit/bin.cjs", "studio", "--host", "0.0.0.0", "--port", "4983"]
+    ports:
+      - "127.0.0.1:4983:4983"
+    volumes:
+      - app_data:/app/apps/backend/data
+    depends_on:
+      - backend
+
 
 volumes:
   redis_data:

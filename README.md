@@ -220,7 +220,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 
 ## Roadmap — What Needs to Happen to Get There
 
-### Phase 1: Core transcription pipeline (in progress)
+### Phase 1: Core transcription pipeline (complete ✅)
 - [x] Wire up a minimal front-end to the existing back-end:
   - [x] Start/stop audio recording on the frontend using MediaRecorder
   - [x] Upload audio recordings directly to the backend
@@ -233,22 +233,25 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 - [x] Integrate views for drizzle ORM
 - [x] With `turbo`, create a build system for the monorepo.
 - [x] Add `docker-compose.yml` to orchestrate the entire build-system.
-- [ ] Create new session, and session handling
-- [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 
-### Phase 2: SOAP note + prescription generation
+### Phase 2: SOAP note + prescription generation (in progress ⏳)
 - [ ] Define the prompt/pipeline that turns a raw (diarized) transcript into the four SOAP fields (`subjective`, `objective`, `assessment`, `plan`).
 - [ ] Define how a draft prescription is derived from the `plan` field and represented in the data model (currently no explicit prescription entity exists — only `plan` as free text inside SOAP notes; decide if this needs its own table).
 - [ ] Build the Inbox UI: per-session view showing patient profile, transcript, generated SOAP note, and editable prescription, with a clear "doctor edited" flag (already supported via `doctorEdited` on notes) and an audit trail of what was changed.
 
-### Phase 3: Compliance and security hardening
-- [ ] Add authentication and role-based access control (a doctor should only see their own patients' sessions, at minimum).
+### Phase 3: Security hardening
+- [ ] Create new sessions (doctor-patient), and session handling
+- [ ] Implement JWT-based stateless authentication:
+  - [ ] Implement credentials login issuing signed app JWTs on success.
+  - [ ] Integrate Google/Gmail OAuth exchange (receiving Google ID token, validating user, and issuing app JWT).
+  - [ ] Add Hono JWT validation middleware across all API routes to extract and set verified user context.
+- [ ] Add role-based access control (RBAC) and ownership checks (e.g., scoping patient/session reads and writes to the authenticated doctor's ID).
 - [ ] Add protection from various forms of compromise of back-end data. This involves securing the views of BullMQ and Drizzle from external viewing on PROD.
 - [ ] Add audit logging for note edits and prescription changes — who changed what, when (this is also necessary to make `doctorEdited` actually meaningful for hospital recordkeeping).
-- [ ] Encrypt data at rest (patient PII, transcripts, notes) and define an explicit retention policy rather than indefinite-by-default storage — most jurisdictions set retention minimums and rules, not an "indefinite" default.
-- [ ] Write up an honest compliance posture doc: what's actually covered (self-hosted private infrastructure, no third-party audio/data transmission) vs. what would still be required for real HIPAA compliance in production (BAAs, formal risk assessment, breach notification process).
+- [ ] Encrypt data at rest (patient PII, transcripts, notes).
 
 ### Phase 4: Pluggable Engines & Client-Side WASM (Stretch Goals)
+- [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 - [ ] Refactor the backend/frontend boundaries to support pluggable transcription and LLM engines (Self-Hosted, Cloud, and Client-Side WASM).
 - [ ] Prototype `whisper.wasm` integration in the frontend using Web Workers to perform transcription entirely on-device.
 - [ ] Experiment with `ffmpeg.wasm` for frontend-side audio resampling to feed directly into the browser-based speech-to-text engine.
