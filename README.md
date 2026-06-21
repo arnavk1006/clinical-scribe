@@ -103,8 +103,9 @@ All developer commands can be run directly from the root of the project using Bu
   ```bash
   bun run test
   ```
-* **Database migrations & seeding (Drizzle Kit):**
+* **Database setup & migrations (Drizzle Kit):**
   ```bash
+  bun run db:setup       # Runs schema generation, migrations, and seeds in one command
   bun run db:generate    # Scans schemas and generates SQL migrations
   bun run db:migrate     # Applies migrations to the local SQLite database
   bun run db:seed        # Seeds the database with sample data
@@ -231,7 +232,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 - [x] Integrate metrics + views for BullMQ queue
 - [ ] Integrate views for drizzle ORM
 - [x] With `turbo`, create a build system for the monorepo.
-- [ ] Add `docker-compose.yml` to orchestrate the entire build-system.
+- [x] Add `docker-compose.yml` to orchestrate the entire build-system.
 - [ ] Create new session, and session handling
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 

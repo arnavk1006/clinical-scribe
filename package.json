@@ -13,9 +13,11 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "db:visualize": "turbo run db:studio",
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
-    "db:seed": "turbo run db:seed"
+    "db:seed": "turbo run db:seed",
+    "db:setup": "bun run db:generate && bun run db:migrate && bun run db:seed"
   },
   "dependencies": {
     "@bull-board/api": "^8.0.1",
