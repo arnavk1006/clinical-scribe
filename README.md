@@ -230,7 +230,7 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 - [x] Interface with whisper.cpp to transcribe a saved audio chunk, one at a time, and write the result back via the existing transcript chunk routes.
 - [x] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
 - [x] Integrate metrics + views for BullMQ queue
-- [ ] Integrate views for drizzle ORM
+- [x] Integrate views for drizzle ORM
 - [x] With `turbo`, create a build system for the monorepo.
 - [x] Add `docker-compose.yml` to orchestrate the entire build-system.
 - [ ] Create new session, and session handling
