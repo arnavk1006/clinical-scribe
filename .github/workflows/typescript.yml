@@ -11,6 +11,9 @@ jobs:
     name: Build, Lint, and Test
     runs-on: ubuntu-latest
 
+    env:
+      REDIS_HOST: localhost
+
     services:
       redis:
         image: redis:alpine
@@ -33,6 +36,14 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: Run Linting
         run: bun run lint

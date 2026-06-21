@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Redis cache/queue server for BullMQ
+  redis:
+    image: redis:7-alpine
+    container_name: clinical-scribe-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  # Backend Hono API Server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinical-scribe-backend
+    command: ["bun", "run", "dev:backend"]
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=${PORT:-3000}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - DATABASE_PATH=${DATABASE_PATH:-./data/clinical-scribe.sqlite}
+      - WHISPER_SERVER_URL=${WHISPER_SERVER_URL:-http://host.docker.internal:8080}
+      - UPLOAD_DIR=${UPLOAD_DIR:-/private/tmp}
+    depends_on:
+      - redis
+    volumes:
+      - app_data:/app/apps/backend/data
+      - tmp_uploads:/private/tmp
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Frontend Vite Dev Server
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinical-scribe-frontend
+    command: ["bun", "run", "dev:frontend"]
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  redis_data:
+  app_data:
+  tmp_uploads:

@@ -71,23 +71,27 @@ clinical-scribe/
 │       └── vite.config.ts
 ```
 
-### Workspace Commands
+### Workspace Commands (Turborepo)
 
-All developer commands can be run directly from the root of the project using Bun:
+All developer commands can be run directly from the root of the project using Bun and are orchestrated by Turborepo:
 
 * **Install all dependencies:**
   ```bash
   bun install
   ```
-* **Run Hono API Dev Server (Backend):**
+* **Run dev servers in tandem (Backend & Frontend):**
+  ```bash
+  bun run dev
+  ```
+* **Run Hono API Dev Server only (Backend):**
   ```bash
   bun run dev:backend
   ```
-* **Run React/Vite Dev Server (Frontend):**
+* **Run React/Vite Dev Server only (Frontend):**
   ```bash
   bun run dev:frontend
   ```
-* **Run Monorepo Typechecking:**
+* **Run Monorepo Typechecking (in parallel):**
   ```bash
   bun run typecheck
   ```
@@ -108,27 +112,33 @@ All developer commands can be run directly from the root of the project using Bu
 
 ### Environment Variables
 
-The backend can be configured using a `.env` file inside `apps/backend/`. A template is provided in `apps/backend/.env.example`.
+The project supports environment variable configuration at the root of the workspace. A template is provided in `.env.example`.
 
-* **`PORT`** (Default: `3000`): The port the Hono backend server listens on.
+* **`PORT`** (Default: `3000`): The port the backend server listens on.
+* **`FRONTEND_PORT`** (Default: `5173`): The port the frontend server runs on.
 * **`DATABASE_PATH`** (Default: `./data/clinical-scribe.sqlite`): File path to the SQLite database.
-* **`UPLOAD_DIR`** (Default: `/tmp`): The folder where uploaded audio files are saved (pruned every 3 days by macOS if left to default).
+* **`UPLOAD_DIR`** (Default: `/private/tmp`): The folder where uploaded audio files are saved.
+* **`REDIS_HOST`** (Default: `redis`): The hostname of the Redis instance.
+* **`REDIS_PORT`** (Default: `6379`): The port of the Redis instance.
+* **`WHISPER_SERVER_URL`** (Default: `http://host.docker.internal:8080`): The address of the whisper.cpp HTTP server.
 
-### Docker Deployment
+### Docker Deployment (Compose)
 
-A `Dockerfile` is provided at the root of the project to package the application with all necessary system dependencies pre-configured.
+A `docker-compose.yml` configuration is provided to orchestrate the application backend, frontend, and a shared Redis queue database in tandem.
 
-1. **Build the image:**
+1. **Configure Environment Variables**:
+   Copy the example template to your active `.env` file at the root of the project:
    ```bash
-   docker build -t clinical-scribe .
+   cp .env.example .env
    ```
 
-2. **Run the container:**
+2. **Start the environment**:
+   Build and boot all containers (frontend, backend, Redis) together:
    ```bash
-   docker run -p 3000:3000 clinical-scribe
+   docker compose up --build
    ```
 
-The container automatically installs `ffmpeg` and starts the Hono backend server.
+The backend container installs `ffmpeg` automatically, maps the SQLite database to a persistent Docker volume, and communicates with your host-running Whisper server or container network dependencies seamlessly.
 
 
 ---
@@ -220,7 +230,8 @@ Defined in [apps/backend/src/routes/transcripts.ts](file:///Users/arnavkohli/src
 - [x] Split transcription worker into producer + consumer with BullMQ (Redis) managing state outside the server.
 - [x] Integrate metrics + views for BullMQ queue
 - [ ] Integrate views for drizzle ORM
-- [ ] With `turbo`, create a build system for the monorepo.
+- [x] With `turbo`, create a build system for the monorepo.
+- [ ] Add `docker-compose.yml` to orchestrate the entire build-system.
 - [ ] Create new session, and session handling
 - [ ] Improve whisper.cpp output quality: add speaker diarization (so doctor vs. patient speech is distinguishable) and a medical vocabulary/fine-tune pass to cut down on mistranscribed drug names, dosages, and clinical terms.
 
