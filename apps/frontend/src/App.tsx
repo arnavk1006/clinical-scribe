@@ -9,6 +9,7 @@ function AudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const sequenceNumberRef = useRef(0);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
 
   const startRecording = async () => {
@@ -65,7 +66,7 @@ function AudioRecorder() {
           const response = await client.api.transcripts[":id"].chunks.$post({
             param: { id: transcriptId },
             form: {
-              sequenceNumber: "0",
+              sequenceNumber: sequenceNumberRef.current.toString(),
               file: file,
             },
           })
@@ -100,6 +101,7 @@ function AudioRecorder() {
       streamRef.current.getTracks().forEach((track) => track.stop())
     }
     setIsRecording(false)
+    sequenceNumberRef.current += 1
   }
 
   const handleToggleRecording = () => {
