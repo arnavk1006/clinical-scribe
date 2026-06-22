@@ -4,8 +4,8 @@ import doctorsRouter from "./routes/doctors";
 import sessionsRouter from "./routes/sessions";
 import notesRouter from "./routes/notes";
 import transcriptsRouter from "./routes/transcripts";
-import { serverAdapter } from "./transcription/queue";
-import "./transcription/worker";
+import { serverAdapter } from "./queues";
+import "./workers/transcription";
 
 export const app = new Hono();
 

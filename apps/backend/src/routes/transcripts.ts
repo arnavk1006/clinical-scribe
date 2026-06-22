@@ -4,7 +4,7 @@ import { transcripts, transcriptChunks } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { promises as fs } from "fs";
 import { join, resolve } from "path";
-import { transcriptionQueue } from "../transcription/queue";
+import { transcriptionQueue } from "../queues";
 import { validator } from "hono/validator";
 
 if (!process.env.UPLOAD_DIR) {
